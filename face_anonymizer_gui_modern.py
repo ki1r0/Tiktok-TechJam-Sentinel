@@ -42,9 +42,16 @@ from run_ettin import EttinDetector
 ctk.set_appearance_mode("dark")  # Modes: system (default), light, dark
 ctk.set_default_color_theme("blue")  # Themes: blue (default), dark-blue, green
 
-WHISPER_PY = r"D:\software/anaconda/envs/whispercpu/python.exe"  
-PII_PY = r"D:\software/anaconda/envs/pii/python.exe"
-GENERAL_PIC_DIR = r"D:\A/Tiktok-TechJam-Sentinel/general_pic"
+# Platform-specific configurations
+import platform
+if platform.system() == "Darwin":  # macOS
+    WHISPER_PY = "python3"  # Use system python3 on macOS
+    PII_PY = "python3"
+    GENERAL_PIC_DIR = os.path.join(os.path.dirname(__file__), "general_pic")
+else:  # Windows
+    WHISPER_PY = r"D:\software/anaconda/envs/whispercpu/python.exe"  
+    PII_PY = r"D:\software/anaconda/envs/pii/python.exe"
+    GENERAL_PIC_DIR = r"D:\A/Tiktok-TechJam-Sentinel/general_pic"
 
 WHISPER_CLI = os.path.join(os.path.dirname(__file__), "whisper_cli.py")
 
@@ -341,7 +348,7 @@ class ModernMultiFunctionGUI:
         # Process button
         self.process_btn = ctk.CTkButton(
             main_frame,
-            text="� Process Image/Video",
+            text="🚀 Process Image/Video",
             command=self.process_image,
             width=250,
             height=50,
@@ -390,18 +397,35 @@ class ModernMultiFunctionGUI:
         controls_frame = ctk.CTkFrame(main_frame)
         controls_frame.pack(fill="x", padx=20, pady=(0, 20))
         
+        # Control buttons container
+        buttons_container = ctk.CTkFrame(controls_frame, fg_color="transparent")
+        buttons_container.pack(pady=20)
+        
         # Record button
         self.record_btn = ctk.CTkButton(
-            controls_frame,
+            buttons_container,
             text="🎤 Start Recording",
             command=self.toggle_recording,
-            width=200,
+            width=180,
             height=50,
             corner_radius=25,
-            font=ctk.CTkFont(size=16, weight="bold"),
+            font=ctk.CTkFont(size=14, weight="bold"),
             state="disabled"
         )
-        self.record_btn.pack(pady=20)
+        self.record_btn.pack(side="left", padx=(0, 10))
+        
+        # Upload audio button
+        self.upload_audio_btn = ctk.CTkButton(
+            buttons_container,
+            text="📁 Upload Audio",
+            command=self.upload_audio_file,
+            width=180,
+            height=50,
+            corner_radius=25,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            state="disabled"
+        )
+        self.upload_audio_btn.pack(side="left", padx=(10, 0))
         
         # Text output area
         text_frame = ctk.CTkFrame(main_frame)
@@ -430,7 +454,7 @@ class ModernMultiFunctionGUI:
         # Action buttons
         action_frame = ctk.CTkFrame(main_frame)
         action_frame.pack(fill="x", padx=20, pady=(0, 20))
-        
+
         button_config = {
             "width": 140,
             "height": 35,
@@ -981,30 +1005,47 @@ class ModernMultiFunctionGUI:
         self.process_btn.configure(text="🚀 Process Image/Video", state="normal")
     
     def load_whisper_model(self):
-        """用外部py脚本（另一个环境）来跑 whisper，主进程不 import"""
+        """Load Whisper model - try external first, fallback to direct import"""
         try:
             def update_status_safe(text, color):
                 self.root.after(0, lambda: self.speech_status.configure(text=text, text_color=color))
 
+            # First try external CLI approach
             update_status_safe("🔄 Loading Whisper (external)...", ("orange", "yellow"))
+            
+            if os.path.exists(WHISPER_CLI):
+                try:
+                    p = subprocess.run(
+                        [WHISPER_PY, WHISPER_CLI, "--ping"],
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                        timeout=10
+                    )
+                    ok = False
+                    try:
+                        resp = json.loads(p.stdout.strip() or "{}")
+                        ok = bool(resp.get("ok"))
+                    except Exception:
+                        pass
 
-            p = subprocess.run(
-                [WHISPER_PY, WHISPER_CLI, "--ping"],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
-            )
-            ok = False
-            try:
-                resp = json.loads(p.stdout.strip() or "{}")
-                ok = bool(resp.get("ok"))
-            except Exception:
-                pass
-
-            if p.returncode == 0 and ok:
-                self.whisper_backend = "ext"
-                update_status_safe("✅ Whisper ready (isolated env)", ("green", "lightgreen"))
-                self.root.after(0, lambda: self.record_btn.configure(state="normal"))
-            else:
-                raise RuntimeError(p.stdout)
+                    if p.returncode == 0 and ok:
+                        self.whisper_backend = "ext"
+                        update_status_safe("✅ Whisper ready (external)", ("green", "lightgreen"))
+                        self.root.after(0, lambda: self.record_btn.configure(state="normal"))
+                        self.root.after(0, lambda: self.upload_audio_btn.configure(state="normal"))
+                        return
+                except subprocess.TimeoutExpired:
+                    pass
+                except Exception:
+                    pass
+            
+            # Fallback to direct import
+            update_status_safe("🔄 Loading Whisper (direct)...", ("orange", "yellow"))
+            import whisper
+            self.whisper_model = whisper.load_model("base")
+            self.whisper_backend = "direct"
+            update_status_safe("✅ Whisper ready (direct)", ("green", "lightgreen"))
+            self.root.after(0, lambda: self.record_btn.configure(state="normal"))
+            self.root.after(0, lambda: self.upload_audio_btn.configure(state="normal"))
 
         except Exception as e:
             traceback.print_exc()
@@ -1082,31 +1123,34 @@ class ModernMultiFunctionGUI:
             audio_data = b''.join(self.audio_frames)
             audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
             
-            # Transcribe with Whisper
-            # result = self.whisper_model.transcribe(audio_array)
-            # text = result["text"].strip()
-            # 写临时 WAV（16kHz 单声道）
-            with tempfile.TemporaryDirectory() as td:
-                wav_path = os.path.join(td, "input.wav")
-                int16 = (np.clip(audio_array, -1.0, 1.0) * 32768.0).astype(np.int16)
+            # Transcribe with Whisper using the appropriate backend
+            if hasattr(self, 'whisper_backend') and self.whisper_backend == "ext":
+                # External CLI approach
+                with tempfile.TemporaryDirectory() as td:
+                    wav_path = os.path.join(td, "input.wav")
+                    int16 = (np.clip(audio_array, -1.0, 1.0) * 32768.0).astype(np.int16)
 
-                import wave
-                with wave.open(wav_path, "wb") as wf:
-                    wf.setnchannels(1)
-                    wf.setsampwidth(2)
-                    wf.setframerate(16000)
-                    wf.writeframes(int16.tobytes())
+                    import wave
+                    with wave.open(wav_path, "wb") as wf:
+                        wf.setnchannels(1)
+                        wf.setsampwidth(2)
+                        wf.setframerate(16000)
+                        wf.writeframes(int16.tobytes())
 
-                # 调用外部环境的 python 来跑 whisper_cli.py
-                cmd = [WHISPER_PY, WHISPER_CLI, "--model", "base", "--device", "cpu", wav_path]
-                p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-                try:
-                    resp = json.loads(p.stdout.strip() or "{}")
-                    if not resp.get("ok"):
-                        raise RuntimeError(p.stdout)
-                    text = (resp.get("text") or "").strip()
-                except Exception:
-                    raise RuntimeError("Whisper CLI failed:\n" + p.stdout)
+                    # Call external Whisper CLI
+                    cmd = [WHISPER_PY, WHISPER_CLI, "--model", "base", "--device", "cpu", wav_path]
+                    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                    try:
+                        resp = json.loads(p.stdout.strip() or "{}")
+                        if not resp.get("ok"):
+                            raise RuntimeError(p.stdout)
+                        text = (resp.get("text") or "").strip()
+                    except Exception:
+                        raise RuntimeError("Whisper CLI failed:\n" + p.stdout)
+            else:
+                # Direct approach
+                result = self.whisper_model.transcribe(audio_array)
+                text = result["text"].strip()
 
             if text:
                 # Add text to the text area
@@ -1179,6 +1223,103 @@ class ModernMultiFunctionGUI:
             return
         
         self._run_pii_detection(text, "Speech Transcription")
+    
+    def upload_audio_file(self):
+        """Upload and transcribe an audio file"""
+        if not hasattr(self, 'whisper_backend'):
+            messagebox.showerror("Error", "Whisper model not ready yet. Please wait and try again.")
+            return
+        
+        # Open file dialog to select audio file
+        file_path = filedialog.askopenfilename(
+            title="Select Audio File",
+            filetypes=[
+                ("Audio files", "*.wav *.mp3 *.m4a *.mp4 *.aac *.ogg *.flac *.wma"),
+                ("WAV files", "*.wav"),
+                ("MP3 files", "*.mp3"),
+                ("MP4 files", "*.mp4"),
+                ("M4A files", "*.m4a"),
+                ("All files", "*.*")
+            ]
+        )
+        
+        if not file_path:
+            return  # User cancelled
+        
+        try:
+            # Update status and disable button during processing
+            self.speech_status.configure(
+                text=f"🔄 Processing audio file: {os.path.basename(file_path)}...", 
+                text_color=("orange", "yellow")
+            )
+            self.upload_audio_btn.configure(state="disabled", text="🔄 Processing...")
+            
+            # Process audio file in background thread
+            threading.Thread(target=self._process_audio_file, args=(file_path,), daemon=True).start()
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to process audio file: {str(e)}")
+            self._reset_upload_button()
+    
+    def _process_audio_file(self, file_path):
+        """Process uploaded audio file with external Whisper"""
+        try:
+            # Update status
+            self.root.after(0, lambda: self.speech_status.configure(
+                text=f"🎵 Transcribing audio with Whisper AI...", 
+                text_color=("orange", "yellow")
+            ))
+            
+            # Transcribe using the appropriate backend
+            if self.whisper_backend == "ext":
+                # External CLI approach
+                cmd = [WHISPER_PY, WHISPER_CLI, "--model", "base", "--device", "cpu", file_path]
+                p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                
+                try:
+                    resp = json.loads(p.stdout.strip() or "{}")
+                    if not resp.get("ok"):
+                        raise RuntimeError(p.stdout)
+                    text = (resp.get("text") or "").strip()
+                except Exception:
+                    raise RuntimeError("Whisper CLI failed:\n" + p.stdout)
+            else:
+                # Direct approach
+                result = self.whisper_model.transcribe(file_path)
+                text = result["text"].strip()
+            
+            if text:
+                # Add text to the text area with file info
+                filename = os.path.basename(file_path)
+                self.root.after(0, lambda: self.speech_text.insert(tk.END, f"[📁 {filename}]\n{text}\n\n"))
+                self.root.after(0, lambda: self.speech_text.see(tk.END))
+                self.root.after(0, lambda: self.speech_status.configure(
+                    text="✅ Audio file transcription complete!", 
+                    text_color=("green", "lightgreen")
+                ))
+                
+                # Auto-trigger PII detection if enabled and model is loaded
+                if self.pii_enabled.get() and self.pii_detector is not None:
+                    self.root.after(1000, lambda: self._run_pii_detection(text, f"Audio File ({filename})"))
+            else:
+                self.root.after(0, lambda: self.speech_status.configure(
+                    text="⚠️ No speech detected in audio file", 
+                    text_color=("orange", "yellow")
+                ))
+            
+        except Exception as e:
+            self.root.after(0, lambda: messagebox.showerror("Error", f"Failed to transcribe audio file: {str(e)}"))
+            self.root.after(0, lambda: self.speech_status.configure(
+                text="❌ Audio file transcription failed", 
+                text_color=("red", "lightcoral")
+            ))
+        
+        finally:
+            self.root.after(0, lambda: self._reset_upload_button())
+    
+    def _reset_upload_button(self):
+        """Reset upload button state"""
+        self.upload_audio_btn.configure(text="📁 Upload Audio", state="normal")
     
     # Text Input methods
     def copy_to_output(self):
