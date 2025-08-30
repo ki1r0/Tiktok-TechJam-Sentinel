@@ -23,7 +23,10 @@ Manual blurring is slow, inconsistent, and error-prone; cloud redaction services
   <img src="asset/middle.png" width="30%" />
   <img src="asset/anonymized_case2.jpg" width="30%" />
 </p>
-
+<p float="left">
+  <img src="asset/1.png" width="30%" />
+  <img src="asset/2.png" width="30%" />
+</p>
 Sentinel is your pre‑publish privacy shield: before you share a screenshot, send a prompt to an external AI, export a support log, or package a research dataset, it quietly sweeps your content for the usual suspects (faces, emails, phone numbers, IDs, screen text, signage, chat bubbles) and less obvious contextual clues (location hints, internal labels), then lets you instantly anonymize them with the style you prefer—fast automatic cleanup for quick sharing, or a deeper semantic pass when you need thorough assurance. Whether you’re a creator protecting bystanders, a team scrubbing screenshots, a researcher curating compliant datasets, or a developer sanitizing prompts, Sentinel turns privacy from a tedious afterthought into a smooth, on‑device, one‑click habit—no cloud, no waiting, no second exposure risk.
 
 ## 📦 Setup
@@ -194,7 +197,7 @@ By using this code you acknowledge these limitations and responsibilities.
 - For detailed documentation about Sentinel's architecture, model details, evaluation tests, and advanced usage guides, please visit:  
 [**Model Finetuning and Evaluation Details →**](https://github.com/Maxxtucker/Tiktok-TechJam-Sentinel/blob/master/pii-text-detector(train)/README.md)
 [**Sentinel Documentation →**](https://github.com/ki1r0/Tiktok-TechJam-Sentinel/blob/master/Documentation.md)
-- Our Demo video: 
+- Our Demo video: [**Youtube**](https://youtu.be/3FtNaFq0BwQ)
 
 ---
 
