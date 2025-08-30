@@ -45,30 +45,49 @@ Sentinel is a **multimodal privacy preprocessing layer** combining:
 
 ```
 [ User Input ]
-   ├── Text (caption/comment)
-   │     → Tokenization → PII Model Inference → Entity Spans → Masking / Redaction Rules → Sanitized Text
-   ├── Image / Video
+   ├── Text (caption / comment / prompt)
+   │     1. Tokenization
+   │     2. PII Model Inference (entity tagging: 58+ classes)
+   │     3. Entity Span Aggregation / Conflict Resolution
+   │     4. Policy Mapping (mask | partial mask | hash | remove | pseudonym future)
+   │     5. Sanitized Text Output
+   │
+   ├── Audio 
+   │     1. Speech Capture / Ingestion
+   │     2. Speech-to-Text (ASR)
+   │     3. (Then identical to Text pipeline)
+   │          a. Tokenization of Transcript
+   │          b. PII Entity Inference
+   │          c. Span Aggregation / Conflict Resolution
+   │          d. Policy Mapping (bleep | mute | replace token | mask in transcript)
+   │          e. Aligned Transcript Update + Redacted Audio Rendering
+   │     4. Safe Audio + Sanitized Transcript Output
+   |
+   ├── Image 
    │     ├── Fast Face Mode
-   │     │     → Frame Acquisition
-   │     │     → YOLOv12l-face Detection
-   │     │     → Face Region Proposals
-   │     │     → Mode Selection (blur | pixelate | emoji | synthetic swap)
-   │     │     → Post-processing (bystander logic, compositing)
-   │     │     → Safe Media
+   │     │     1. Frame Acquisition
+   │     │     2. YOLOv12l-face Detection
+   │     │     3. Face Region Proposals + Filtering
+   │     │     4. Mode Selection (blur | pixelate | emoji | synthetic swap)
+   │     │     5. Bystander Logic (keep-largest optional)
+   │     │     6. Compositing / Output (Safe Media)
+   │     │
    │     └── Deep Mode (Advanced Visual Sensitive Detector)
-   │           → Frame Acquisition
-   │           → Multi-Stage Analysis:
-   │                1. Face Detection (YOLOv12l-face)
-   │                2. OCR Extraction (screen text, chat bubbles, signage, ID text)
-   │                3. Contextual Object / Scene Cues (street signs, license plates, UI panels)
-   │                4. Geo/Identity Risk Scoring (toponyms, number patterns, branded/logotype regions)
-   │           → Region Fusion & Deduplication (merge overlapping face+text+object boxes)
-   │           → Classification of Region Type (FACE | TEXT-PII | LOCATION-CUE | ID-DOCUMENT | SCREENSHOT-UI)
-   │           → Policy-Based Transform (mask | blur | pixelate | synthetic replace | remove)
-   │           → Confidence-Aware Review (optional user override in GUI)
-   │           → Safe Media
-   └── Audio (planned)
-         → Speech-to-Text → PII Tagging → Segment Redaction / Bleep → Re-aligned Transcript (future module)
+   │           1. Frame Acquisition
+   │           2. Multi-Stage Analysis:
+   │                a. Face Detection (YOLOv12l-face)
+   │                b. OCR Extraction (screen text, chat bubbles, signage, ID text)
+   │                c. Contextual Object / Scene Cues (signage, license plates, UI panels)
+   │                d. Semantic / Geo / Identity Risk Scoring
+   │           3. Region Fusion & Deduplication (merge overlapping face + text + object boxes)
+   │           4. Region Classification
+   │                (FACE | TEXT-PII | LOCATION-CUE | ID-DOCUMENT | SCREENSHOT-UI | OTHER-SENSITIVE)
+   │           5. Policy-Based Transform
+   │                (mask | blur | pixelate | synthetic replace | remove)
+   │           6. Confidence-Aware Review (optional GUI override)
+   │           7. Compositing / Output (Safe Media)
+   │
+   └── Video (planned)
 ```
 **Deep Mode Notes**
 - OCR output is immediately piped through the same PII text classifier for high-resolution token-level redaction within detected text regions.
@@ -164,8 +183,8 @@ Policy Example:
 
 ### 4.8 Multimodality Focus
 
-Current: Text + Image + (Video frames treated as image sequences).  
-Roadmap: Audio (speech), Screen-captured sequences (temporal OCR), Cross-modal correlation (e.g., name extracted from text triggers face anonymization priority list if caption references a person).
+Current: Text + Audio + Image.  
+Roadmap: Video
 
 ### 4.9 Evaluation & Metrics
 
@@ -237,13 +256,8 @@ By functioning as a *universal privacy preprocessor*, Sentinel lowers friction t
 
 ## 7. Technical Model Details (Placeholder)
 
-(To be expanded)
-- YOLOv12l-face: architecture summary (backbone, input size, anchor-free heads).
-- Ettin Encoder (1B / 400M / planned up to 3B multimodal) parameter breakdown: embedding dims, attention depth, positional encoding.
-- DeBERTa / ModernBERT comparative parameterization.
-- Inference optimization: quantization strategy, ONNX Runtime graph fusions, potential TensorRT plans.
-- Memory & throughput benchmarks (CPU vs. GPU vs. Apple Silicon).
-- Synthetic face swap pipeline: alignment → embedding extraction → conditional generation.
+- For detailed documentation about Sentinel's architecture, model details, evaluation tests, please visit:  
+[**Model Finetuning and Evaluation Details →**](https://github.com/Maxxtucker/Tiktok-TechJam-Sentinel/blob/master/pii-text-detector(train)/README.md)
 
 ## 8. Additional Notes & Ethical Guardrails
 
@@ -253,17 +267,7 @@ By functioning as a *universal privacy preprocessor*, Sentinel lowers friction t
 - Open source licensing encourages community audits for privacy integrity.
 - Potential integration with platform publishing SDKs so Sentinel acts as a *pre-flight privacy gate*.
 
-## 9. References
-
-- (Model Performance) Internal benchmarking documented in `pii-text-detector(train)/README.md`.
-- (Face Detection) YOLO face model release: https://github.com/YapaLab/yolo-face
-- (Face Swapping Backbone) InsightFace InSwapper project & model weights.
-- (PII Categories Guidance) NIST Privacy Framework; general data taxonomy references.
-- (Privacy Risk Escalation) Public discussions on inadvertent AI data exposure & logging practices.
-- (OCR + Sensitive Text Risk) Research on screenshot and document leakage in social media ecosystems.
-- (Geo-Location Inference) Studies on image-based location prediction and scene text correlation.
-
-## 10. Summary
+## 9. Summary
 
 Sentinel operationalizes proactive, multimodal privacy defense for social media creators and a wide range of adjacent workflows: **detect → decide → anonymize**, compressing a traditionally manual, error-prone chain into a subsecond, user-friendly workflow. With strong PII recall, flexible masking strategies, a lean on-device footprint (≤ ~3B parameters for extended multimodality), and an extensible architecture, it forms a practical blueprint toward “privacy-by-default” content creation and data handling.
 
