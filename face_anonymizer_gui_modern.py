@@ -895,7 +895,7 @@ class ModernMultiFunctionGUI:
                 self.root.after(0, lambda: self.speech_status.configure(text=text, text_color=color))
             
             update_status_safe("🔄 Loading Whisper AI model...", ("orange", "yellow"))
-            self.whisper_model = whisper.load_model("base")
+            self.whisper_model = whisper.load_model("base", device="cpu")
             update_status_safe("✅ Whisper model loaded. Ready to record!", ("green", "lightgreen"))
             self.root.after(0, lambda: self.record_btn.configure(state="normal"))
         except Exception as e:
