@@ -137,9 +137,9 @@ class ModernMultiFunctionGUI:
         self.tabview.pack(fill="both", expand=True, padx=20, pady=20)
         
         # Add tabs
-        self.face_tab = self.tabview.add("🖼️ Face Anonymizer")
-        self.speech_tab = self.tabview.add("🎤 Speech to Text")
-        self.text_tab = self.tabview.add("📝 Text Processing")
+        self.face_tab = self.tabview.add("🖼️ Image")
+        self.speech_tab = self.tabview.add("🎤 Speech")
+        self.text_tab = self.tabview.add("📝 Text")
         
     def create_face_anonymizer_tab(self):
         """Create enhanced Face Anonymizer tab with all original settings"""
