@@ -26,6 +26,7 @@ import wave
 import tempfile
 import whisper
 import numpy as np
+import traceback
 # from tkinter_tooltip import ToolTip  # Optional tooltip library
 
 # Import our main anonymizer
@@ -898,6 +899,7 @@ class ModernMultiFunctionGUI:
             update_status_safe("✅ Whisper model loaded. Ready to record!", ("green", "lightgreen"))
             self.root.after(0, lambda: self.record_btn.configure(state="normal"))
         except Exception as e:
+            traceback.print_exc()  # 打印完整错误到 PowerShell
             def update_error():
                 self.speech_status.configure(text=f"❌ Failed to load Whisper: {str(e)}", text_color=("red", "lightcoral"))
             self.root.after(0, update_error)
