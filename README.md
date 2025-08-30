@@ -24,36 +24,9 @@ A unified face anonymization tool that uses **YOLO for accurate face detection**
 pip install -r requirements.txt
 ```
 
-### 2. Download YOLO Face Model
+### 2. Launch the Application
 ```bash
-curl -L -o yolov12l-face.pt "https://github.com/YapaLab/yolo-face/releases/download/v0.0.0/yolov12l-face.pt"
-```
-
-### 3. Download InSwapper Model (for high-quality replacement)
-```bash
-# Create directory
-mkdir -p ~/.insightface/models
-
-# Download InSwapper model
-gdown "https://drive.google.com/uc?id=1krOLgjW2tAPaqV-Bw4YALz0xT5zlb5HF" \
-  -O ~/.insightface/models/inswapper_128.onnx
-```
-
-## 🎯 Usage
-
-### Option 1: Simple GUI (Recommended)
-
-**Launch the graphical interface:**
-```bash
-# Option 1: Direct launch
-python3 face_anonymizer_gui.py
-
-# Option 2: Using launcher script
-python3 run_gui.py
-
-# Option 3: Make executable and run directly
-chmod +x run_gui.py
-./run_gui.py
+python3 face_anonymizer_gui_modern.py
 ```
 
 The GUI provides:
