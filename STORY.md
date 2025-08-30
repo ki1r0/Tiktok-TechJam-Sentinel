@@ -48,15 +48,33 @@ Sentinel is a **multimodal privacy preprocessing layer** combining:
    ├── Text (caption/comment)
    │     → Tokenization → PII Model Inference → Entity Spans → Masking / Redaction Rules → Sanitized Text
    ├── Image / Video
-   │     → Frame Acquisition
-   │     → Face Detector (YOLO v12l-face)
-   │     → Region Proposal List
-   │     → Mode Selection (blur | pixelate | emoji | synthetic swap)
-   │     → Post-processing (quality scaling, bystander logic, compositing)
-   │     → Safe Media
-   └── (Planned) Advanced Visual Sensitive Detector (OCR + Object + Scene Cues)
-         → Street / Screen / Sign / ID Text Regions → Mask / Obfuscate
+   │     ├── Fast Face Mode
+   │     │     → Frame Acquisition
+   │     │     → YOLOv12l-face Detection
+   │     │     → Face Region Proposals
+   │     │     → Mode Selection (blur | pixelate | emoji | synthetic swap)
+   │     │     → Post-processing (bystander logic, compositing)
+   │     │     → Safe Media
+   │     └── Deep Mode (Advanced Visual Sensitive Detector)
+   │           → Frame Acquisition
+   │           → Multi-Stage Analysis:
+   │                1. Face Detection (YOLOv12l-face)
+   │                2. OCR Extraction (screen text, chat bubbles, signage, ID text)
+   │                3. Contextual Object / Scene Cues (street signs, license plates, UI panels)
+   │                4. Geo/Identity Risk Scoring (toponyms, number patterns, branded/logotype regions)
+   │           → Region Fusion & Deduplication (merge overlapping face+text+object boxes)
+   │           → Classification of Region Type (FACE | TEXT-PII | LOCATION-CUE | ID-DOCUMENT | SCREENSHOT-UI)
+   │           → Policy-Based Transform (mask | blur | pixelate | synthetic replace | remove)
+   │           → Confidence-Aware Review (optional user override in GUI)
+   │           → Safe Media
+   └── Audio (planned)
+         → Speech-to-Text → PII Tagging → Segment Redaction / Bleep → Re-aligned Transcript (future module)
 ```
+**Deep Mode Notes**
+- OCR output is immediately piped through the same PII text classifier for high-resolution token-level redaction within detected text regions.
+- Object / scene cue detection augments OCR to catch non-textual location hints (e.g., distinctive storefront signage, license plates).
+- Region Fusion ensures a single masking pass even when multiple detectors flag overlapping areas (e.g., a face inside a chat screenshot).
+- Risk scoring prioritizes masking order; higher-risk regions (e.g., government ID text) are applied first to avoid partial exposure during preview.
 
 ### 4.2 Text PII Detection Subsystem
 
@@ -79,12 +97,12 @@ Key steps:
    - Hashing: Deterministic salted hash for pseudonymization while preserving referentiality.
 7. **Audit Map Output**: Provide JSON manifest: `{ "type": "EMAIL", "text": "...", "confidence": 0.97, "start": 34, "end": 49 }` enabling traceability.
 
-### 4.3 Image / Video Face Anonymization Subsystem
+### 4.3 Image Face Anonymization Subsystem
 
 Referenced code: `face_anonymizer.py`, `face_anonymizer_main.py`, `face_anonymizer_gui_modern.py`.
 
 Core components:
-1. **Detection**: YOLOv12l-face model run per frame / image producing bounding boxes + confidences.
+1. **Detection**: YOLOv12l-face model run image producing bounding boxes + confidences.
 2. **Selection Logic**:
    - Default: All faces except (optionally) primary subject (largest bounding box) to protect bystanders while preserving creator identity.
    - GUI: Click to toggle per-face anonymization (`face_anonymizer_gui_modern.py` handles interactive event mapping).
@@ -93,13 +111,11 @@ Core components:
    - Pixelate: Downscale–upscale blocks; interpolation selectable (Nearest / Linear / Cubic).
    - Emoji Overlay: Alpha-composited PNG from `/emoji/` assets; auto-resized to bounding box with centering offsets.
    - Synthetic Replacement: InsightFace InSwapper (`inswapper_128.onnx`) swaps random or uniform synthetic face—preserves natural lighting & pose.
-4. **Batch Processing**:
-   - Video reading loop decodes frames → detection caching (optional) → anonymization → writer pipeline (preserves FPS & codec).
-5. **Performance Optimizations**:
+4. **Performance Optimizations**:
    - Model warm start (load once).
    - (Optional) Confidence > threshold short-circuits low-prob detections.
    - Vectorized pixelation / blur kernels.
-6. **Safety Envelope**:
+5. **Safety Envelope**:
    - Expand bounding box with margin factor to avoid hairline leakage.
    - Resize operations maintain aspect ratio; fallback cropping if bounds exceed canvas.
 
