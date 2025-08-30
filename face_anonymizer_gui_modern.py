@@ -96,7 +96,8 @@ class ModernMultiFunctionGUI:
         self.keep_largest = tk.BooleanVar()
         self.interactive = tk.BooleanVar()
         self.model = None
-        
+        self.detect_mode = tk.StringVar(value="fast")   # fast / deep
+
         # Speech to Text variables
         self.recording = False
         self.audio_frames = []
@@ -239,6 +240,34 @@ class ModernMultiFunctionGUI:
             )
             radio.grid(row=0, column=i, padx=20, pady=5, sticky="w")
         
+        # Detection mode section (Insert this after Anonymization Mode section)
+        det_frame = ctk.CTkFrame(main_frame, corner_radius=15)
+        det_frame.pack(fill="x", pady=(0, 20))
+        
+        ctk.CTkLabel(
+            det_frame,
+            text="🧠 Detection Mode",
+            font=ctk.CTkFont(size=16, weight="bold")
+        ).pack(pady=(15, 10))
+        
+        det_row = ctk.CTkFrame(det_frame, fg_color="transparent")
+        det_row.pack(fill="x", padx=20, pady=(0, 15))
+        
+        ctk.CTkRadioButton(
+            det_row,
+            text="⚡ Fast detection ",
+            variable=self.detect_mode,
+            value="fast",
+            font=ctk.CTkFont(size=12)
+        ).pack(side="left", padx=10)
+        
+        ctk.CTkRadioButton(
+            det_row,
+            text="🔎 Deep detection",
+            variable=self.detect_mode,
+            value="deep",
+            font=ctk.CTkFont(size=12)
+        ).pack(side="left", padx=10)
         # Detection threshold
         threshold_container = ctk.CTkFrame(mode_frame, fg_color="transparent")
         threshold_container.pack(fill="x", padx=20, pady=(0, 20))
@@ -868,41 +897,45 @@ class ModernMultiFunctionGUI:
             elif mode == "replace":
                 result = anonymize_synthetic(image, faces, self.synthetic_dir.get(), 
                                            self.random_faces.get(), self.keep_largest.get())
-            try:
-                from pathlib import Path
+            if self.detect_mode.get() == "deep":
+                try:
+                    print("start general_pic pipeline (DEEP mode)...")
+                    from pathlib import Path
 
-                # 以最终输出名为基准，复用文件名与扩展名
-                out_path = Path(self.output_path.get())
-                name = out_path.stem
-                ext = out_path.suffix.lower() if out_path.suffix else ".png"  
+                    # 以最终输出名为基准，复用文件名与扩展名
+                    out_path = Path(self.output_path.get())
+                    name = out_path.stem
+                    ext = out_path.suffix.lower() if out_path.suffix else ".png"  
 
-                gp_input  = Path(GENERAL_PIC_DIR) / "inputs"
-                gp_output = Path(GENERAL_PIC_DIR) / "outputs"
-                gp_input.mkdir(parents=True, exist_ok=True)
-                gp_output.mkdir(parents=True, exist_ok=True)
+                    gp_input  = Path(GENERAL_PIC_DIR) / "inputs"
+                    gp_output = Path(GENERAL_PIC_DIR) / "outputs"
+                    gp_input.mkdir(parents=True, exist_ok=True)
+                    gp_output.mkdir(parents=True, exist_ok=True)
 
-                # 1) 暂存到 general_pic\input\{name}{ext}
-                gp_in_file = gp_input / f"{name}{ext}"
-                cv2.imwrite(str(gp_in_file), result)
+                    # 1) 暂存到 general_pic\input\{name}{ext}
+                    gp_in_file = gp_input / f"{name}{ext}"
+                    cv2.imwrite(str(gp_in_file), result)
 
-                # 2) 调 pipeline（PII 环境，cwd=general_pic）
-                _log = self._run_general_pic_pipeline(str(gp_in_file))
-                print("[general_pic/pipeline] done\n", _log)
-                final_path = gp_output / f"{name}_final{ext}"
-                processed = None
-                if final_path.exists():
-                    img = cv2.imread(str(final_path), cv2.IMREAD_UNCHANGED)
-                    if img is not None:
-                        processed = img
-    
-                # 找到就用 pipeline 结果覆盖 result；没找到就继续用原 result
-                if processed is not None:
-                    result = processed
-                else:
-                    print("[general_pic/pipeline] output not found, keep original result.")
+                    # 2) 调 pipeline（PII 环境，cwd=general_pic）
+                    _log = self._run_general_pic_pipeline(str(gp_in_file))
+                    print("[general_pic/pipeline] done\n", _log)
+                    final_path = gp_output / f"{name}_final{ext}"
+                    processed = None
+                    if final_path.exists():
+                        img = cv2.imread(str(final_path), cv2.IMREAD_UNCHANGED)
+                        if img is not None:
+                            processed = img
+        
+                    # 找到就用 pipeline 结果覆盖 result；没找到就继续用原 result
+                    if processed is not None:
+                        result = processed
+                    else:
+                        print("[general_pic/pipeline] output not found, keep original result.")
 
-            except Exception as pe:
-                print("[general_pic/pipeline] failed:", pe)
+                except Exception as pe:
+                    print("[general_pic/pipeline] failed:", pe)
+            else:
+                print("Detection mode = FAST → skip general_pic pipeline.")
             # Save result
             os.makedirs(os.path.dirname(self.output_path.get()), exist_ok=True)
             cv2.imwrite(self.output_path.get(), result)

@@ -110,7 +110,7 @@ def main():
             boxes.append([x1,y1,x2,y2])
     print("bboxes to redact:", boxes)
     redacted = apply_mosaic_boxes(img, boxes, mosaic_block=18)
-    
+
     ext = INPUT_IMG.suffix.lower() if INPUT_IMG.suffix else ".png"
     redacted_path = OUT_DIR / f"{INPUT_IMG.stem}_redacted{ext}"
     save_image(redacted, redacted_path)
@@ -129,8 +129,6 @@ def main():
     final_img_path = OUT_DIR / f"{INPUT_IMG.stem}_final{ext}"
     save_image(image_final, final_img_path)
 
-
-# ===== 自测 =====
 if __name__ == "__main__":
     from pathlib import Path
     import shutil
