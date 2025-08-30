@@ -32,6 +32,9 @@ import numpy as np
 from face_anonymizer_main import detect_faces_yolo, anonymize_blur, anonymize_pixelate, anonymize_emoji, anonymize_synthetic, interactive_face_selection
 from ultralytics import YOLO
 
+# Import PII detection functionality
+from run_ettin import EttinDetector
+
 # Set the appearance mode and color theme
 ctk.set_appearance_mode("dark")  # Modes: system (default), light, dark
 ctk.set_default_color_theme("blue")  # Themes: blue (default), dark-blue, green
@@ -59,6 +62,9 @@ class ModernMultiFunctionGUI:
         
         # Load YOLO model in background after UI is ready
         self.root.after(1000, lambda: threading.Thread(target=self.load_yolo_model, daemon=True).start())
+        
+        # Load PII detection model in background
+        self.root.after(1500, lambda: threading.Thread(target=self.load_pii_model, daemon=True).start())
         
     def _init_variables(self):
         # Face Anonymizer variables (matching original GUI)
@@ -90,6 +96,11 @@ class ModernMultiFunctionGUI:
         self.recognizer = sr.Recognizer()
         
         # Text Input variables - no special variables needed for basic text input
+        
+        # PII Detection variables
+        self.pii_detector = None
+        self.pii_enabled = tk.BooleanVar(value=True)
+        self.pii_threshold = tk.DoubleVar(value=0.5)
         
     def create_header(self):
         """Create a modern header with app title and description"""
@@ -303,8 +314,8 @@ class ModernMultiFunctionGUI:
         
     def create_speech_to_text_tab(self):
         """Create enhanced Speech to Text tab"""
-        # Main frame
-        main_frame = ctk.CTkFrame(self.speech_tab, corner_radius=15)
+        # Main scrollable frame
+        main_frame = ctk.CTkScrollableFrame(self.speech_tab, width=840, height=520)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
         # Header
@@ -387,6 +398,7 @@ class ModernMultiFunctionGUI:
         
         ctk.CTkButton(action_frame, text="💾 Save", command=self.save_speech_text, **button_config).pack(side="left", padx=5, pady=10)
         ctk.CTkButton(action_frame, text="📋 Copy", command=self.copy_speech_text, **button_config).pack(side="left", padx=5, pady=10)
+        ctk.CTkButton(action_frame, text="🔍 Detect PII", command=self.detect_pii_speech, **button_config).pack(side="left", padx=5, pady=10)
         ctk.CTkButton(action_frame, text="🗑 Clear", command=self.clear_speech_text, **button_config).pack(side="left", padx=5, pady=10)
         
         # Load Whisper model in background after UI is ready
@@ -394,8 +406,8 @@ class ModernMultiFunctionGUI:
         
     def create_text_input_tab(self):
         """Create enhanced Text Processing tab"""
-        # Main frame
-        main_frame = ctk.CTkFrame(self.text_tab, corner_radius=15)
+        # Main scrollable frame
+        main_frame = ctk.CTkScrollableFrame(self.text_tab, width=840, height=520)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
         # Header
@@ -480,6 +492,7 @@ class ModernMultiFunctionGUI:
         row1.pack(pady=(0, 8))
         
         ctk.CTkButton(row1, text="➡️ Copy to Output", command=self.copy_to_output, **button_config).pack(side="left", padx=3)
+        ctk.CTkButton(row1, text="🔍 Detect PII", command=self.detect_pii_text, **button_config).pack(side="left", padx=3)
         
         # Row 2 - File operations
         row2 = ctk.CTkFrame(process_frame, fg_color="transparent")
@@ -529,6 +542,19 @@ class ModernMultiFunctionGUI:
         
         load_model()
     
+    def load_pii_model(self):
+        """Load PII detection model in background"""
+        def load_model():
+            try:
+                print("🤖 Loading PII detection model...")
+                self.pii_detector = EttinDetector()
+                print("✅ PII detection model loaded successfully!")
+            except Exception as e:
+                print(f"⚠️ Warning: Could not load PII detection model: {str(e)}")
+                self.pii_detector = None
+        
+        load_model()
+    
     def update_status(self, message):
         """Update status label safely from any thread"""
         if hasattr(self, 'status_label'):
@@ -548,10 +574,9 @@ class ModernMultiFunctionGUI:
             
     def create_mode_options(self):
         """Create mode-specific options matching the original GUI"""
-        # Clear existing mode-specific widgets
+        # Clear all existing widgets in the options frame
         for widget in self.options_frame.winfo_children():
-            if hasattr(widget, '_mode_specific'):
-                widget.destroy()
+            widget.destroy()
         
         # Header
         ctk.CTkLabel(
@@ -565,7 +590,6 @@ class ModernMultiFunctionGUI:
         # Create mode-specific options frame
         mode_options_frame = ctk.CTkFrame(self.options_frame)
         mode_options_frame.pack(fill="x", padx=20, pady=(0, 15))
-        mode_options_frame._mode_specific = True
         
         if mode == "blur":
             # Blur type selection
@@ -954,6 +978,10 @@ class ModernMultiFunctionGUI:
                 self.root.after(0, lambda: self.speech_text.insert(tk.END, f"{text}\n\n"))
                 self.root.after(0, lambda: self.speech_text.see(tk.END))
                 self.root.after(0, lambda: self.speech_status.configure(text="✅ Transcription complete! Ready to record", text_color=("green", "lightgreen")))
+                
+                # Auto-trigger PII detection if enabled and model is loaded
+                if self.pii_enabled.get() and self.pii_detector is not None:
+                    self.root.after(1000, lambda: self._run_pii_detection(text, "Speech Transcription"))
             else:
                 self.root.after(0, lambda: self.speech_status.configure(text="⚠️ No speech detected. Try again", text_color=("orange", "yellow")))
             
@@ -1004,6 +1032,19 @@ class ModernMultiFunctionGUI:
         if messagebox.askyesno("Confirm", "Clear all transcribed text?"):
             self.speech_text.delete(1.0, tk.END)
     
+    def detect_pii_speech(self):
+        """Detect PII in speech transcription text"""
+        text = self.speech_text.get(1.0, tk.END).strip()
+        if not text:
+            messagebox.showwarning("Warning", "No text to analyze")
+            return
+        
+        if self.pii_detector is None:
+            messagebox.showerror("Error", "PII detection model not loaded yet. Please wait and try again.")
+            return
+        
+        self._run_pii_detection(text, "Speech Transcription")
+    
     # Text Input methods
     def copy_to_output(self):
         """Copy input text to output area"""
@@ -1011,6 +1052,19 @@ class ModernMultiFunctionGUI:
         self.text_output_area.delete(1.0, tk.END)
         self.text_output_area.insert(1.0, text)
         self.update_text_stats()
+    
+    def detect_pii_text(self):
+        """Detect PII in text input"""
+        text = self.text_input_area.get(1.0, tk.END).strip()
+        if not text:
+            messagebox.showwarning("Warning", "No text to analyze")
+            return
+        
+        if self.pii_detector is None:
+            messagebox.showerror("Error", "PII detection model not loaded yet. Please wait and try again.")
+            return
+        
+        self._run_pii_detection(text, "Text Input")
     
     def open_text_file(self):
         """Open text file into input area"""
@@ -1234,6 +1288,190 @@ class ModernMultiFunctionGUI:
             # If opening fails, show the file location instead
             error_msg = f"Could not automatically open the image.\n\nImage saved to:\n{image_path}\n\nError: {str(e)}"
             messagebox.showwarning("Cannot Open Image", error_msg)
+    
+    def _run_pii_detection(self, text, source_type):
+        """Run PII detection and show results in a popup window"""
+        try:
+            # Run PII detection
+            ner_results, pii_found, word_predictions = self.pii_detector.predict_pii(text, self.pii_threshold.get())
+            
+            # Create results window
+            self._show_pii_results(text, ner_results, pii_found, word_predictions, source_type)
+            
+        except Exception as e:
+            messagebox.showerror("PII Detection Error", f"Failed to analyze text for PII:\n{str(e)}")
+    
+    def _show_pii_results(self, original_text, ner_results, pii_found, word_predictions, source_type):
+        """Show PII detection results in a new window"""
+        # Create results window
+        results_window = ctk.CTkToplevel(self.root)
+        results_window.title(f"🔍 PII Detection Results - {source_type}")
+        results_window.geometry("800x600")
+        results_window.transient(self.root)
+        results_window.grab_set()
+        
+        # Main scrollable frame
+        main_frame = ctk.CTkScrollableFrame(results_window, width=760, height=560)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Header
+        header_label = ctk.CTkLabel(
+            main_frame,
+            text=f"🔍 PII Detection Results",
+            font=ctk.CTkFont(size=20, weight="bold")
+        )
+        header_label.pack(pady=(0, 10))
+        
+        # Source info
+        source_label = ctk.CTkLabel(
+            main_frame,
+            text=f"Source: {source_type}",
+            font=ctk.CTkFont(size=14),
+            text_color=("gray60", "gray40")
+        )
+        source_label.pack(pady=(0, 15))
+        
+        # Overall summary
+        summary_frame = ctk.CTkFrame(main_frame)
+        summary_frame.pack(fill="x", pady=(0, 15))
+        
+        if pii_found:
+            summary_color = ("red", "lightcoral")
+            summary_text = f"⚠️ PII DETECTED: {len(pii_found)} types found"
+            pii_types = ", ".join(sorted(pii_found))
+        else:
+            summary_color = ("green", "lightgreen")
+            summary_text = "✅ NO PII DETECTED"
+            pii_types = "No sensitive information found"
+        
+        ctk.CTkLabel(
+            summary_frame,
+            text=summary_text,
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=summary_color
+        ).pack(pady=10)
+        
+        ctk.CTkLabel(
+            summary_frame,
+            text=f"Types: {pii_types}",
+            font=ctk.CTkFont(size=12),
+            text_color=("gray60", "gray40")
+        ).pack(pady=(0, 10))
+        
+        # Original text
+        text_frame = ctk.CTkFrame(main_frame)
+        text_frame.pack(fill="x", pady=(0, 15))
+        
+        ctk.CTkLabel(
+            text_frame,
+            text="📝 Original Text:",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", padx=15, pady=(15, 5))
+        
+        text_display = scrolledtext.ScrolledText(
+            text_frame,
+            width=70,
+            height=6,
+            wrap=tk.WORD,
+            font=("Consolas", 10),
+            bg="#2B2B2B",
+            fg="white",
+            state=tk.DISABLED
+        )
+        text_display.pack(fill="x", padx=15, pady=(0, 15))
+        
+        text_display.config(state=tk.NORMAL)
+        text_display.insert(1.0, original_text)
+        text_display.config(state=tk.DISABLED)
+        
+        # Word-level results (Primary display)
+        if pii_found:
+            word_details_frame = ctk.CTkFrame(main_frame)
+            word_details_frame.pack(fill="x", pady=(0, 15))
+            
+            ctk.CTkLabel(
+                word_details_frame,
+                text="🔤 Word-Level PII Detection:",
+                font=ctk.CTkFont(size=16, weight="bold")
+            ).pack(anchor="w", padx=15, pady=(15, 10))
+            
+            # Create a frame for word-level results
+            word_results_frame = ctk.CTkFrame(word_details_frame)
+            word_results_frame.pack(fill="x", padx=15, pady=(0, 15))
+            
+            pii_words_found = False
+            for word_pred in word_predictions:
+                if word_pred['label'] != 'O':
+                    pii_words_found = True
+                    word_item = ctk.CTkFrame(word_results_frame)
+                    word_item.pack(fill="x", padx=10, pady=5)
+                    
+                    # Word and PII label
+                    ctk.CTkLabel(
+                        word_item,
+                        text=f"🚨 Word: '{word_pred['word']}'",
+                        font=ctk.CTkFont(size=14, weight="bold"),
+                        text_color=("white", "white")
+                    ).pack(anchor="w", padx=10, pady=(8, 2))
+                    
+                    # PII type and confidence
+                    ctk.CTkLabel(
+                        word_item,
+                        text=f"   📍 PII Type: {word_pred['label']} | Confidence: {word_pred['confidence']:.3f}",
+                        font=ctk.CTkFont(size=12),
+                        text_color=("red", "lightcoral")
+                    ).pack(anchor="w", padx=10, pady=(0, 8))
+            
+            if not pii_words_found:
+                ctk.CTkLabel(
+                    word_results_frame,
+                    text="No PII detected at word level",
+                    font=ctk.CTkFont(size=12),
+                    text_color=("gray60", "gray40")
+                ).pack(padx=10, pady=10)
+            
+            # Token-level details (Secondary)
+            token_details_frame = ctk.CTkFrame(main_frame)
+            token_details_frame.pack(fill="x", pady=(0, 15))
+            
+            ctk.CTkLabel(
+                token_details_frame,
+                text="🔍 Token-Level Details (Advanced):",
+                font=ctk.CTkFont(size=14, weight="bold")
+            ).pack(anchor="w", padx=15, pady=(15, 10))
+            
+            # Create a frame for token-level results
+            token_results_frame = ctk.CTkFrame(token_details_frame)
+            token_results_frame.pack(fill="x", padx=15, pady=(0, 15))
+            
+            for result in ner_results:
+                if result['score'] >= self.pii_threshold.get():
+                    token_item = ctk.CTkFrame(token_results_frame)
+                    token_item.pack(fill="x", padx=10, pady=3)
+                    
+                    ctk.CTkLabel(
+                        token_item,
+                        text=f"Token: '{result['word']}' → {result['entity_group']}",
+                        font=ctk.CTkFont(size=11),
+                        text_color=("gray70", "gray50")
+                    ).pack(anchor="w", padx=8, pady=3)
+                    
+                    ctk.CTkLabel(
+                        token_item,
+                        text=f"   Confidence: {result['score']:.3f} | Position: {result['start']}-{result['end']}",
+                        font=ctk.CTkFont(size=9),
+                        text_color=("gray60", "gray40")
+                    ).pack(anchor="w", padx=8, pady=(0, 3))
+        
+        # Close button
+        close_btn = ctk.CTkButton(
+            main_frame,
+            text="Close",
+            command=results_window.destroy,
+            width=100,
+            height=35
+        )
+        close_btn.pack(pady=15)
     
 def main():
     """Main function to run the application"""

@@ -57,3 +57,5 @@ test/test_*.png
 # Logs
 *.log
 logs/
+
+pii_ettin_encoder_1b_v1/*
