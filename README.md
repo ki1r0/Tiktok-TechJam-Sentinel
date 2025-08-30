@@ -24,7 +24,16 @@ A unified face anonymization tool that uses **YOLO for accurate face detection**
 pip install -r requirements.txt
 ```
 
-### 2. Launch the Application
+### 2. Download Required Models
+Download the PII detection models from: [https://drive.google.com/drive/folders/1fxljdNcruwfbLTIBIjWU-dLWR2z-Gn3U?usp=sharing](https://drive.google.com/drive/folders/1fxljdNcruwfbLTIBIjWU-dLWR2z-Gn3U?usp=sharing)
+
+Available models:
+- `pii_deberta_base_v1` - DeBERTa-based PII detection model
+- `pii_ettin_encoder_1b_v1` - Ettin 1B encoder model (recommended)
+- `pii_ettin_encoder_400m_v1` - Ettin 400M encoder model
+- `pii_modernbert_base_v1` - ModernBERT-based PII detection model
+
+### 3. Launch the Application
 ```bash
 python3 face_anonymizer_gui_modern.py
 ```
