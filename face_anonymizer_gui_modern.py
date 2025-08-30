@@ -536,7 +536,7 @@ class ModernMultiFunctionGUI:
                 self.model = YOLO('yolov12l-face.pt')
                 update_status_safe("✅ Face detection model loaded successfully!")
             except Exception as e:
-                def update_error():
+                def update_error(err=e):
                     self.status_label.configure(text=f"⚠️ Warning: {str(e)}")
                 self.root.after(0, update_error)
         
@@ -1484,4 +1484,5 @@ def main():
         mb.showerror("Startup Error", f"Failed to start application: {e}")
 
 if __name__ == "__main__":
+    print(">>> GUI starting...")
     main()

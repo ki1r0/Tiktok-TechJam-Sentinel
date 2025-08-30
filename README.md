@@ -33,11 +33,40 @@ Available models:
 - `pii_ettin_encoder_400m_v1` - Ettin 400M encoder model
 - `pii_modernbert_base_v1` - ModernBERT-based PII detection model
 
-### 3. Launch the Application
+### 3.set up yolo
+
+MacOS
+```bash
+curl -L -o yolov12l-face.pt "https://github.com/YapaLab/yolo-face/releases/download/v0.0.0/yolov12l-face.pt"
+
+mkdir -p ~/.insightface/models
+
+# Download InSwapper model
+gdown "https://drive.google.com/uc?id=1krOLgjW2tAPaqV-Bw4YALz0xT5zlb5HF" \
+  -O ~/.insightface/models/inswapper_128.onnx
+```
+
+Windows:
+```bash
+Invoke-WebRequest "https://github.com/YapaLab/yolo-face/releases/download/v0.0.0/yolov12l-face.pt" -OutFile "yolov12l-face.pt"
+
+mkdir .insightface\models
+
+gdown "https://drive.google.com/uc?id=1krOLgjW2tAPaqV-Bw4YALz0xT5zlb5HF" `
+  -O ".insightface\models\inswapper_128.onnx"
+```
+
+### 4. Launch the Application
+
+MacOS
 ```bash
 python3 face_anonymizer_gui_modern.py
 ```
 
+Windows:
+```bash
+python face_anonymizer_gui_modern.py
+```
 The GUI provides:
 - Easy file selection for input/output
 - Visual mode selection (blur, pixelate, emoji, replace)
