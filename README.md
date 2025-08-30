@@ -144,7 +144,7 @@ tiktoken
 
 ### Audio / Speech
 PyAudio  
-SpeechRecognition  
+Whisper  
 
 ### GUI / UX
 tkinter  
