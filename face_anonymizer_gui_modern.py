@@ -140,11 +140,15 @@ class ModernMultiFunctionGUI:
         self.face_tab = self.tabview.add("🖼️ Image")
         self.speech_tab = self.tabview.add("🎤 Speech")
         self.text_tab = self.tabview.add("📝 Text")
-        
+        try:
+            for btn in self.tabview._segmented_button._buttons_dict.values():
+                btn.configure(width=120, anchor="center")  # 宽度你可以调，比如 100/120/140
+        except Exception as e:
+            print(f"Warning: Could not configure tab buttons: {e}")
     def create_face_anonymizer_tab(self):
         """Create enhanced Face Anonymizer tab with all original settings"""
         # Main scrollable frame
-        main_frame = ctk.CTkScrollableFrame(self.face_tab, width=840, height=520)
+        main_frame = ctk.CTkScrollableFrame(self.face_tab, width=950, height=520)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
         # Welcome section
@@ -153,7 +157,7 @@ class ModernMultiFunctionGUI:
         
         ctk.CTkLabel(
             welcome_frame,
-            text="🛡️ Face Privacy Protection Tool",
+            text="🛡️ Image Privacy Protection Tool",
             font=ctk.CTkFont(size=20, weight="bold")
         ).pack(pady=(15, 5))
         
