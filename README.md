@@ -38,6 +38,8 @@ Available models:
 - `pii_deberta_base_v1` - DeBERTa-based PII detection model
 - `pii_modernbert_base_v1` - ModernBERT-based PII detection model
 
+Download the Qwen2.5vl-3B model from: [https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct)
+
 ### 3. Set Up Yolo
 
 MacOS
@@ -185,7 +187,7 @@ By using this code you acknowledge these limitations and responsibilities.
 ## 📚 Links
 
 - For detailed documentation about Sentinel's architecture, model details, evaluation tests, and advanced usage guides, please visit:  
-[**Model Finetuning and Evaluation Details →**](https://github.com/Maxxtucker/Tiktok-TechJam-Sentinel/blob/master/pii-text-detector(train)/README.md))
+[**Model Finetuning and Evaluation Details →**](https://github.com/Maxxtucker/Tiktok-TechJam-Sentinel/blob/master/pii-text-detector(train)/README.md)
 [**Sentinel Documentation →**](https://github.com/ki1r0/Tiktok-TechJam-Sentinel/blob/master/STORY.md)
 - Our Demo video: 
 
@@ -243,5 +245,12 @@ By using this code you acknowledge these limitations and responsibilities.
   publisher  = {Hugging Face}
 }
 ```
-
+```
+@article{Qwen2.5-VL,
+  title={Qwen2.5-VL Technical Report},
+  author={Bai, Shuai and Chen, Keqin and Liu, Xuejing and Wang, Jialin and Ge, Wenbin and Song, Sibo and Dang, Kai and Wang, Peng and Wang, Shijie and Tang, Jun and Zhong, Humen and Zhu, Yuanzhi and Yang, Mingkun and Li, Zhaohai and Wan, Jianqiang and Wang, Pengfei and Ding, Wei and Fu, Zheren and Xu, Yiheng and Ye, Jiabo and Zhang, Xi and Xie, Tianbao and Cheng, Zesen and Zhang, Hang and Yang, Zhibo and Xu, Haiyang and Lin, Junyang},
+  journal={arXiv preprint arXiv:2502.13923},
+  year={2025}
+}
+```
 <p align="center"><b>Sentinel — Share boldly. Reveal wisely.</b></p>
