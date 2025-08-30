@@ -89,12 +89,12 @@ Test media (multi-face images, signage, screen snippets) live with following com
 
 ### macOS / Linux
 ```bash
-python3 launcher.py
+python3 face_anonymizer_gui_modern.py
 ```
 
 ### Windows
 ```powershell
-python launcher.py
+python face_anonymizer_gui_modern.py
 ```
 
 Try inside the GUI:
