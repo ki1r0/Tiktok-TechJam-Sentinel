@@ -18,6 +18,9 @@ Manual blurring is slow, inconsistent, and error-prone; cloud redaction services
 ---
 
 ## ✨ Sentinel At a Glance
+![case2](asset\case2.jpg)
+![case2](asset\middle.png)
+![case2](asset\anonymized_case2.jpg)
 
 Sentinel is your pre‑publish privacy shield: before you share a screenshot, send a prompt to an external AI, export a support log, or package a research dataset, it quietly sweeps your content for the usual suspects (faces, emails, phone numbers, IDs, screen text, signage, chat bubbles) and less obvious contextual clues (location hints, internal labels), then lets you instantly anonymize them with the style you prefer—fast automatic cleanup for quick sharing, or a deeper semantic pass when you need thorough assurance. Whether you’re a creator protecting bystanders, a team scrubbing screenshots, a researcher curating compliant datasets, or a developer sanitizing prompts, Sentinel turns privacy from a tedious afterthought into a smooth, on‑device, one‑click habit—no cloud, no waiting, no second exposure risk.
 
