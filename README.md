@@ -1,6 +1,15 @@
+<table>
+<tr>
+<td width="180"><img src="asset/Logo.png" alt="Sentinel logo" width="220"/></td>
+<td>
+
 # Sentinel - Guardian of Privacy⚔️  
-### Multimodal, On‑Device AI Privacy Guard 
+### Multimodal, On-Device AI Privacy Guard  
 > Detect • Understand • Anonymize — all locally.
+
+</td>
+</tr>
+</table>
 
 ---
 
