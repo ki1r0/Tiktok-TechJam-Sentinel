@@ -24,9 +24,11 @@ import speech_recognition as sr
 import pyaudio
 import wave
 import tempfile
-import whisper
+# import whisper
 import numpy as np
 import traceback
+import subprocess, json
+
 # from tkinter_tooltip import ToolTip  # Optional tooltip library
 
 # Import our main anonymizer
@@ -39,6 +41,9 @@ from run_ettin import EttinDetector
 # Set the appearance mode and color theme
 ctk.set_appearance_mode("dark")  # Modes: system (default), light, dark
 ctk.set_default_color_theme("blue")  # Themes: blue (default), dark-blue, green
+
+WHISPER_PY = r"D:\software/anaconda/envs/whispercpu/python.exe"  # 改成你的实际路径
+WHISPER_CLI = os.path.join(os.path.dirname(__file__), "whisper_cli.py")
 
 class ModernMultiFunctionGUI:
     def __init__(self):
@@ -888,22 +893,56 @@ class ModernMultiFunctionGUI:
         self.process_btn.configure(text="🚀 Process Image/Video", state="normal")
     
     # Speech to Text methods
+    # def load_whisper_model(self):
+    #     """Load Whisper model in background"""
+    #     try:
+    #         def update_status_safe(text, color):
+    #             self.root.after(0, lambda: self.speech_status.configure(text=text, text_color=color))
+            
+    #         update_status_safe("🔄 Loading Whisper AI model...", ("orange", "yellow"))
+    #         self.whisper_model = whisper.load_model("base", device="cpu")
+    #         update_status_safe("✅ Whisper model loaded. Ready to record!", ("green", "lightgreen"))
+    #         self.root.after(0, lambda: self.record_btn.configure(state="normal"))
+    #     except Exception as e:
+    #         traceback.print_exc()  # 打印完整错误到 PowerShell
+    #         def update_error():
+    #             self.speech_status.configure(text=f"❌ Failed to load Whisper: {str(e)}", text_color=("red", "lightcoral"))
+    #         self.root.after(0, update_error)
     def load_whisper_model(self):
-        """Load Whisper model in background"""
+        """用外部py脚本（另一个环境）来跑 whisper，主进程不 import"""
         try:
             def update_status_safe(text, color):
                 self.root.after(0, lambda: self.speech_status.configure(text=text, text_color=color))
-            
-            update_status_safe("🔄 Loading Whisper AI model...", ("orange", "yellow"))
-            self.whisper_model = whisper.load_model("base", device="cpu")
-            update_status_safe("✅ Whisper model loaded. Ready to record!", ("green", "lightgreen"))
-            self.root.after(0, lambda: self.record_btn.configure(state="normal"))
+
+            update_status_safe("🔄 Loading Whisper (external)...", ("orange", "yellow"))
+
+            p = subprocess.run(
+                [WHISPER_PY, WHISPER_CLI, "--ping"],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+            )
+            ok = False
+            try:
+                resp = json.loads(p.stdout.strip() or "{}")
+                ok = bool(resp.get("ok"))
+            except Exception:
+                pass
+
+            if p.returncode == 0 and ok:
+                self.whisper_backend = "ext"
+                update_status_safe("✅ Whisper ready (isolated env)", ("green", "lightgreen"))
+                self.root.after(0, lambda: self.record_btn.configure(state="normal"))
+            else:
+                raise RuntimeError(p.stdout)
+
         except Exception as e:
-            traceback.print_exc()  # 打印完整错误到 PowerShell
+            traceback.print_exc()
             def update_error():
-                self.speech_status.configure(text=f"❌ Failed to load Whisper: {str(e)}", text_color=("red", "lightcoral"))
+                self.speech_status.configure(
+                    text=f"❌ Whisper unavailable: {e}",
+                    text_color=("red", "lightcoral")
+                )
             self.root.after(0, update_error)
-    
+
     def toggle_recording(self):
         """Toggle recording on/off"""
         if not self.recording:
@@ -972,9 +1011,31 @@ class ModernMultiFunctionGUI:
             audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
             
             # Transcribe with Whisper
-            result = self.whisper_model.transcribe(audio_array)
-            text = result["text"].strip()
-            
+            # result = self.whisper_model.transcribe(audio_array)
+            # text = result["text"].strip()
+            # 写临时 WAV（16kHz 单声道）
+            with tempfile.TemporaryDirectory() as td:
+                wav_path = os.path.join(td, "input.wav")
+                int16 = (np.clip(audio_array, -1.0, 1.0) * 32768.0).astype(np.int16)
+
+                import wave
+                with wave.open(wav_path, "wb") as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)
+                    wf.setframerate(16000)
+                    wf.writeframes(int16.tobytes())
+
+                # 调用外部环境的 python 来跑 whisper_cli.py
+                cmd = [WHISPER_PY, WHISPER_CLI, "--model", "base", "--device", "cpu", wav_path]
+                p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                try:
+                    resp = json.loads(p.stdout.strip() or "{}")
+                    if not resp.get("ok"):
+                        raise RuntimeError(p.stdout)
+                    text = (resp.get("text") or "").strip()
+                except Exception:
+                    raise RuntimeError("Whisper CLI failed:\n" + p.stdout)
+
             if text:
                 # Add text to the text area
                 self.root.after(0, lambda: self.speech_text.insert(tk.END, f"{text}\n\n"))

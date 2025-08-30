@@ -21,7 +21,7 @@ def main():
 
     # 真正转写：加载模型（CPU），fp16=False 保守
     model = whisper.load_model(args.model, device=args.device)
-    result = model.transcribe(args.audio_path, fp16=False, language="auto")
+    result = model.transcribe(args.audio_path, fp16=False)
     text = (result.get("text") or "").strip()
     print(json.dumps({"ok": True, "text": text}, ensure_ascii=False))
 
