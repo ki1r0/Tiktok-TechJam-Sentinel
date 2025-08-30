@@ -188,7 +188,7 @@ By using this code you acknowledge these limitations and responsibilities.
 
 - For detailed documentation about Sentinel's architecture, model details, evaluation tests, and advanced usage guides, please visit:  
 [**Model Finetuning and Evaluation Details →**](https://github.com/Maxxtucker/Tiktok-TechJam-Sentinel/blob/master/pii-text-detector(train)/README.md)
-[**Sentinel Documentation →**](https://github.com/ki1r0/Tiktok-TechJam-Sentinel/blob/master/STORY.md)
+[**Sentinel Documentation →**](https://github.com/ki1r0/Tiktok-TechJam-Sentinel/blob/master/Documentation.md)
 - Our Demo video: 
 
 ---
