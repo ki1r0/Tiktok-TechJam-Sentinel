@@ -42,7 +42,10 @@ from run_ettin import EttinDetector
 ctk.set_appearance_mode("dark")  # Modes: system (default), light, dark
 ctk.set_default_color_theme("blue")  # Themes: blue (default), dark-blue, green
 
-WHISPER_PY = r"D:\software/anaconda/envs/whispercpu/python.exe"  # 改成你的实际路径
+WHISPER_PY = r"D:\software/anaconda/envs/whispercpu/python.exe"  
+PII_PY = r"D:\software/anaconda/envs/pii/python.exe"
+GENERAL_PIC_DIR = r"D:\A/Tiktok-TechJam-Sentinel/general_pic"
+
 WHISPER_CLI = os.path.join(os.path.dirname(__file__), "whisper_cli.py")
 
 class ModernMultiFunctionGUI:
@@ -865,11 +868,46 @@ class ModernMultiFunctionGUI:
             elif mode == "replace":
                 result = anonymize_synthetic(image, faces, self.synthetic_dir.get(), 
                                            self.random_faces.get(), self.keep_largest.get())
-            
+            try:
+                from pathlib import Path
+
+                # 以最终输出名为基准，复用文件名与扩展名
+                out_path = Path(self.output_path.get())
+                name = out_path.stem
+                ext = out_path.suffix.lower() if out_path.suffix else ".png"  
+
+                gp_input  = Path(GENERAL_PIC_DIR) / "inputs"
+                gp_output = Path(GENERAL_PIC_DIR) / "outputs"
+                gp_input.mkdir(parents=True, exist_ok=True)
+                gp_output.mkdir(parents=True, exist_ok=True)
+
+                # 1) 暂存到 general_pic\input\{name}{ext}
+                gp_in_file = gp_input / f"{name}{ext}"
+                cv2.imwrite(str(gp_in_file), result)
+
+                # 2) 调 pipeline（PII 环境，cwd=general_pic）
+                _log = self._run_general_pic_pipeline(str(gp_in_file))
+                print("[general_pic/pipeline] done\n", _log)
+                final_path = gp_output / f"{name}_final{ext}"
+                processed = None
+                if final_path.exists():
+                    img = cv2.imread(str(final_path), cv2.IMREAD_UNCHANGED)
+                    if img is not None:
+                        processed = img
+    
+                # 找到就用 pipeline 结果覆盖 result；没找到就继续用原 result
+                if processed is not None:
+                    result = processed
+                else:
+                    print("[general_pic/pipeline] output not found, keep original result.")
+
+            except Exception as pe:
+                print("[general_pic/pipeline] failed:", pe)
             # Save result
             os.makedirs(os.path.dirname(self.output_path.get()), exist_ok=True)
             cv2.imwrite(self.output_path.get(), result)
-            
+            output_file = self.output_path.get()
+
             face_count = len(faces)
             output_file = self.output_path.get()
             
@@ -891,27 +929,24 @@ class ModernMultiFunctionGUI:
             messagebox.showerror("Error", f"Processing failed: {str(e)}")
         finally:
             self._reset_process_button()
-    
+
+    def _run_general_pic_pipeline(self, input_path: str):
+        import subprocess
+        from pathlib import Path
+        gp = Path(GENERAL_PIC_DIR)
+        cmd = [PII_PY, "pipeline.py"]  
+        p = subprocess.run(
+            cmd, cwd=str(gp),
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, shell=False
+        )
+        return p.stdout
+
+
     def _reset_process_button(self):
         """Reset process button state"""
         self.process_btn.configure(text="🚀 Process Image/Video", state="normal")
     
-    # Speech to Text methods
-    # def load_whisper_model(self):
-    #     """Load Whisper model in background"""
-    #     try:
-    #         def update_status_safe(text, color):
-    #             self.root.after(0, lambda: self.speech_status.configure(text=text, text_color=color))
-            
-    #         update_status_safe("🔄 Loading Whisper AI model...", ("orange", "yellow"))
-    #         self.whisper_model = whisper.load_model("base", device="cpu")
-    #         update_status_safe("✅ Whisper model loaded. Ready to record!", ("green", "lightgreen"))
-    #         self.root.after(0, lambda: self.record_btn.configure(state="normal"))
-    #     except Exception as e:
-    #         traceback.print_exc()  # 打印完整错误到 PowerShell
-    #         def update_error():
-    #             self.speech_status.configure(text=f"❌ Failed to load Whisper: {str(e)}", text_color=("red", "lightcoral"))
-    #         self.root.after(0, update_error)
     def load_whisper_model(self):
         """用外部py脚本（另一个环境）来跑 whisper，主进程不 import"""
         try:

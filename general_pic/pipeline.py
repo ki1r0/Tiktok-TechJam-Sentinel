@@ -110,7 +110,9 @@ def main():
             boxes.append([x1,y1,x2,y2])
     print("bboxes to redact:", boxes)
     redacted = apply_mosaic_boxes(img, boxes, mosaic_block=18)
-    redacted_path = OUT_DIR / f"{INPUT_IMG.stem}_redacted.png"
+    
+    ext = INPUT_IMG.suffix.lower() if INPUT_IMG.suffix else ".png"
+    redacted_path = OUT_DIR / f"{INPUT_IMG.stem}_redacted{ext}"
     save_image(redacted, redacted_path)
 
     # 4) 第二次：调用 grounding.py 复核
@@ -123,13 +125,18 @@ def main():
     # 在 redacted 图的基础上再次打码
     image_final = apply_mosaic_boxes(redacted, mosaic_boxes, mosaic_block=18)
 
-    final_img_path = OUT_DIR / f"{INPUT_IMG.stem}_final.png"
+    ext = INPUT_IMG.suffix.lower() if INPUT_IMG.suffix else ".png"
+    final_img_path = OUT_DIR / f"{INPUT_IMG.stem}_final{ext}"
     save_image(image_final, final_img_path)
 
 
 # ===== 自测 =====
 if __name__ == "__main__":
-    TEST_DIR = Path("test_pic")
+    from pathlib import Path
+    import shutil
+    TEST_DIR = Path("inputs")
+    ARCHIVE_DIR = Path("archive")
+
     exts = {".jpg", ".jpeg", ".png", ".bmp"}
 
     for i, img_path in enumerate(TEST_DIR.iterdir(), 1):
@@ -137,3 +144,9 @@ if __name__ == "__main__":
             INPUT_IMG = img_path
             print(f"[{i}] Processing {INPUT_IMG.name}...")
             main()
+        try:
+            target = ARCHIVE_DIR / img_path.name
+            shutil.move(str(img_path), str(target))
+            print(f"Archived {img_path.name} → {target}")
+        except Exception as e:
+            print(f"Failed to archive {img_path.name}: {e}")
