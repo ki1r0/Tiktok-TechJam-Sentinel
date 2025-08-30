@@ -33,9 +33,9 @@ pip install -r requirements.txt
 Download the PII detection models from: [https://drive.google.com/drive/folders/1fxljdNcruwfbLTIBIjWU-dLWR2z-Gn3U?usp=sharing](https://drive.google.com/drive/folders/1fxljdNcruwfbLTIBIjWU-dLWR2z-Gn3U?usp=sharing)
 
 Available models:
-- `pii_deberta_base_v1` - DeBERTa-based PII detection model
 - `pii_ettin_encoder_1b_v1` - Ettin 1B encoder model (recommended)
 - `pii_ettin_encoder_400m_v1` - Ettin 400M encoder model
+- `pii_deberta_base_v1` - DeBERTa-based PII detection model
 - `pii_modernbert_base_v1` - ModernBERT-based PII detection model
 
 ### 3. Set Up Yolo
@@ -65,7 +65,7 @@ gdown "https://drive.google.com/uc?id=1krOLgjW2tAPaqV-Bw4YALz0xT5zlb5HF" `
 
 ## 🚀 Run & Test
 
-Test media (multi-face images, signage, screen snippets, sample video) live in the `test/` directory.
+Test media (multi-face images, signage, screen snippets) live with following commands:
 
 ### macOS / Linux
 ```bash
@@ -81,11 +81,11 @@ Try inside the GUI:
 - Switch Fast ↔ Deep Mode
 - Toggle anonymization styles (Blur / Pixelate / Emoji / Synthetic)
 - Keep largest face (retain creator identity)
-- Click faces to include/exclude
+- Interactive face selection (click faces to include/exclude)
 - Load signage / screen / chat images to see text region fusion
 
 ### Deep Mode
-Enabled directly in the GUI (no extra command). Use signage / chat / dashboard images from `test/` to showcase semantic sweep.
+Enabled directly in the GUI (no extra command). Use signage / chat / dashboard images to showcase semantic sweep now!
 
 ---
 
@@ -99,20 +99,17 @@ Enabled directly in the GUI (no extra command). Use signage / chat / dashboard i
    Fast Mode: instant face + obvious region cleanup.  
    Deep Mode: adds OCR + contextual + semantic PII sweep for maximum coverage.
 
-3. Multimodal Coverage (Now → Next)  
-   Faces, textual PII (58+ classes), screen / signage / chat overlays today; audio & metadata pipeline coming.
+3. Multimodal Coverage (Now)  
+   Faces, textual PII (58+ classes), screen / signage / chat and audio.
 
 4. Visual Anonymization Styles  
    Blur (Gaussian/Box/Median), Pixelate, Emoji overlay, High‑fidelity Synthetic Face Swap (InSwapper).
 
 5. Text Privacy Engine  
-   Structured entity tagging with configurable policies: mask, partial mask, hash, (future) pseudonyms.
+   Structured entity tagging.
 
 6. Bystander & Creator Controls  
    Keep largest face (retain presenter) or anonymize everyone; interactive include/exclude selection.
-
-7. Modular & Auditable  
-   Pluggable detectors (future plates/logos) + optional JSON manifest (type, region/span, confidence) for governance.
 
 ### Key Advantages
 - Zero Secondary Exposure: Eliminates cloud logging & retention risks.
@@ -122,7 +119,7 @@ Enabled directly in the GUI (no extra command). Use signage / chat / dashboard i
 - Compliance Ready: Deterministic policies + audit manifest support internal review & documentation.
 ---
 
-## 🧱 Tech Stack (Minimal – key libraries only)
+## 🧱 Tech Stack (Key libraries only)
 
 ### Computer Vision & Image Processing
 ultralytics  
@@ -156,8 +153,8 @@ tkinter-tooltip
 numpy  
 numba  
 
-### (Planned / Not Yet Included)
-PaddleOCR, Tesseract (OCR pipeline roadmap)
+### OCR
+EasyOCR
 
 ## 🛡️ Privacy & Ethical Stance
 
@@ -188,6 +185,7 @@ By using this code you acknowledge these limitations and responsibilities.
 ## 📚 Links
 
 - For detailed documentation about Sentinel's architecture, model details, evaluation tests, and advanced usage guides, please visit:  
+[**Model Finetuning and Evaluation Details →**](https://github.com/Maxxtucker/Tiktok-TechJam-Sentinel/blob/master/pii-text-detector(train)/README.md))
 [**Sentinel Documentation →**](https://github.com/ki1r0/Tiktok-TechJam-Sentinel/blob/master/STORY.md)
 - Our Demo video: 
 
