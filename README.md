@@ -27,15 +27,8 @@ Manual blurring is slow, inconsistent, and error-prone; cloud redaction services
 ---
 
 ## ✨ Sentinel At a Glance
-<p float="left">
-  <img src="asset/case2.jpg" width="30%" />
-  <img src="asset/middle.png" width="30%" />
-  <img src="asset/anonymized_case2.jpg" width="30%" />
-</p>
-<p float="left">
-  <img src="asset/1.png" width="30%" />
-  <img src="asset/2.png" width="30%" />
-  <img src="asset/3.png" width="30%" />
+<p align="center">
+  <img src="asset/demo.png" width="100%"/>
 </p>
 <p align="center">
   <img src="asset/demo.gif" width="70%" alt="Sentinel demo GIF"/>
